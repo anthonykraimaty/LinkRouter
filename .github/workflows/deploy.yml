@@ -1,0 +1,53 @@
+name: Deploy to VPS
+
+# Deploy on every push to main, or manually from the Actions tab.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  # Never let two deploys run at the same time; cancel an in-progress
+  # deploy if a newer commit is pushed.
+  group: deploy-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: SSH deploy + docker compose rebuild
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          # Fail the job if any command in the script fails.
+          script_stop: true
+          command_timeout: 20m
+          script: |
+            set -e
+            cd ${{ secrets.VPS_APP_DIR }}
+
+            echo "==> Fetching latest code"
+            git fetch --all --prune
+            git reset --hard origin/main
+
+            echo "==> Rebuilding and restarting containers"
+            # Use 'docker compose' (v2). Falls back to 'docker-compose' if needed.
+            if docker compose version >/dev/null 2>&1; then
+              DC="docker compose"
+            else
+              DC="docker-compose"
+            fi
+
+            $DC pull postgres || true
+            $DC up -d --build --remove-orphans
+
+            echo "==> Pruning dangling images"
+            docker image prune -f
+
+            echo "==> Deployment complete"
+            $DC ps

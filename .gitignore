@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.env
+.env.local
+.env.*.local
+
+# Uploaded files live in the Docker named volume on the server, not in git.
+# Match the uploads dir at any depth (e.g. backend/uploads/).
+**/uploads/*
+!**/uploads/.gitkeep
+
+*.log
+.DS_Store
