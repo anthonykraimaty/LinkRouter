@@ -29,7 +29,17 @@ jobs:
           command_timeout: 20m
           script: |
             set -e
-            cd ${{ secrets.VPS_APP_DIR }}
+            APP_DIR="${{ secrets.VPS_APP_DIR }}"
+            REPO="https://github.com/anthonykraimaty/LinkRouter.git"
+
+            echo "==> Ensuring repo exists at $APP_DIR"
+            mkdir -p "$APP_DIR"
+            cd "$APP_DIR"
+            if [ ! -d .git ]; then
+              echo "    No git repo found — bootstrapping clone"
+              git init -q
+              git remote add origin "$REPO" 2>/dev/null || git remote set-url origin "$REPO"
+            fi
 
             echo "==> Fetching latest code"
             git fetch --all --prune
