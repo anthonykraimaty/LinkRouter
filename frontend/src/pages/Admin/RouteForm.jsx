@@ -63,10 +63,10 @@ export default function RouteForm() {
           })
         }
       } else {
-        navigate('/admin', { replace: true })
+        navigate('/manage', { replace: true })
       }
     } catch {
-      navigate('/admin', { replace: true })
+      navigate('/manage', { replace: true })
     } finally {
       setLoading(false)
     }
@@ -94,7 +94,7 @@ export default function RouteForm() {
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
       return 'Slug can only contain lowercase letters, numbers, and hyphens'
     }
-    if (slug === 'admin' || slug === 'api') {
+    if (slug === 'admin' || slug === 'manage' || slug === 'api') {
       return 'This slug is reserved'
     }
     return null
@@ -157,7 +157,7 @@ export default function RouteForm() {
       })
 
       if (res.ok) {
-        navigate('/admin', { replace: true })
+        navigate('/manage', { replace: true })
       } else {
         const data = await res.json()
         if (data.errors) {
@@ -226,7 +226,7 @@ export default function RouteForm() {
       {/* Header */}
       <div className="mb-6">
         <button
-          onClick={() => navigate('/admin')}
+          onClick={() => navigate('/manage')}
           className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 transition-colors"
         >
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -503,7 +503,7 @@ export default function RouteForm() {
         <div className="flex items-center gap-3 justify-end pb-8">
           <button
             type="button"
-            onClick={() => navigate('/admin')}
+            onClick={() => navigate('/manage')}
             className="btn-secondary"
           >
             Cancel

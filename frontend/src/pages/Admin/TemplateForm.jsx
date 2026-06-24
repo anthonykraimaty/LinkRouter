@@ -54,10 +54,10 @@ export default function TemplateForm() {
         setHtmlContent(data.html_content || '')
         setCssContent(data.css_content || '')
       } else {
-        navigate('/admin/templates', { replace: true })
+        navigate('/manage/templates', { replace: true })
       }
     } catch {
-      navigate('/admin/templates', { replace: true })
+      navigate('/manage/templates', { replace: true })
     } finally {
       setLoading(false)
     }
@@ -97,7 +97,7 @@ export default function TemplateForm() {
       })
 
       if (res.ok) {
-        navigate('/admin/templates', { replace: true })
+        navigate('/manage/templates', { replace: true })
       } else {
         const data = await res.json()
         setErrors({ general: data.error || 'Failed to save template' })
@@ -122,7 +122,7 @@ export default function TemplateForm() {
       {/* Header */}
       <div className="mb-6">
         <button
-          onClick={() => navigate('/admin/templates')}
+          onClick={() => navigate('/manage/templates')}
           className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 transition-colors"
         >
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -223,7 +223,7 @@ export default function TemplateForm() {
         <div className="mt-8 flex items-center gap-3 justify-end border-t border-slate-200 pt-6 pb-8">
           <button
             type="button"
-            onClick={() => navigate('/admin/templates')}
+            onClick={() => navigate('/manage/templates')}
             className="btn-secondary"
           >
             Cancel

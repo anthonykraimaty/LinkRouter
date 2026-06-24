@@ -79,7 +79,7 @@ export default function Templates() {
             Manage disabled page templates for your routes
           </p>
         </div>
-        <Link to="/admin/templates/new" className="btn-primary shrink-0">
+        <Link to="/manage/templates/new" className="btn-primary shrink-0">
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
@@ -104,7 +104,7 @@ export default function Templates() {
           </div>
           <h3 className="text-lg font-semibold text-slate-900">No templates yet</h3>
           <p className="mt-1 text-sm text-slate-500">Create a template for disabled route pages.</p>
-          <Link to="/admin/templates/new" className="btn-primary mt-6">
+          <Link to="/manage/templates/new" className="btn-primary mt-6">
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
@@ -121,7 +121,7 @@ export default function Templates() {
                 {/* Overlay on hover */}
                 <div className="absolute inset-0 flex items-center justify-center gap-2 rounded-t-xl bg-black/0 opacity-0 transition-all group-hover:bg-black/40 group-hover:opacity-100">
                   <Link
-                    to={`/admin/templates/${template.id}/edit`}
+                    to={`/manage/templates/${template.id}/edit`}
                     className="rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition-transform hover:bg-slate-50"
                   >
                     Edit

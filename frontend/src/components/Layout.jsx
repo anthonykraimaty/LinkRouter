@@ -46,7 +46,7 @@ export default function Layout() {
 
   const handleLogout = () => {
     logout()
-    navigate('/admin/login')
+    navigate('/manage/login')
   }
 
   const canManageLinks = hasRole('admin', 'link_manager')
@@ -67,15 +67,18 @@ export default function Layout() {
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
         {canManageLinks && (
           <>
-            <SidebarLink to="/admin" icon={<RoutesIcon />} label="Routes" end />
-            <SidebarLink to="/admin/templates" icon={<TemplatesIcon />} label="Templates" />
+            <SidebarLink to="/manage" icon={<RoutesIcon />} label="Routes" end />
+            <SidebarLink to="/manage/templates" icon={<TemplatesIcon />} label="Templates" />
           </>
         )}
         {canViewAnalytics && (
-          <SidebarLink to="/admin/analytics" icon={<AnalyticsIcon />} label="Analytics" />
+          <SidebarLink to="/manage/analytics" icon={<AnalyticsIcon />} label="Analytics" />
         )}
         {canManageUsers && (
-          <SidebarLink to="/admin/users" icon={<UsersIcon />} label="Users" />
+          <>
+            <SidebarLink to="/manage/users" icon={<UsersIcon />} label="Users" />
+            <SidebarLink to="/manage/honeypot" icon={<HoneypotIcon />} label="Honeypot" />
+          </>
         )}
       </nav>
 
@@ -92,7 +95,7 @@ export default function Layout() {
             )}
           </div>
         )}
-        <SidebarLink to="/admin/account/password" icon={<KeyIcon />} label="Change Password" />
+        <SidebarLink to="/manage/account/password" icon={<KeyIcon />} label="Change Password" />
         <SidebarLink onClick={handleLogout} icon={<LogoutIcon />} label="Log out" />
       </div>
     </div>
@@ -196,6 +199,15 @@ function KeyIcon() {
     <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
         d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+    </svg>
+  )
+}
+
+function HoneypotIcon() {
+  return (
+    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+        d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" />
     </svg>
   )
 }

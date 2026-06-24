@@ -177,7 +177,7 @@ export default function Analytics() {
                   return (
                     <span className="flex items-center gap-2">
                       <Link
-                        to={`/admin/analytics/routes/${r.id}`}
+                        to={`/manage/analytics/routes/${r.id}`}
                         className="truncate font-medium text-indigo-600 hover:underline"
                       >
                         /{r.slug}

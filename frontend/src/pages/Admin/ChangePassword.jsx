@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 
 function homePathForRole(role) {
-  if (role === 'analyst') return '/admin/analytics'
-  return '/admin'
+  if (role === 'analyst') return '/manage/analytics'
+  return '/manage'
 }
 
 export default function ChangePassword() {

@@ -9,8 +9,10 @@ import {
   NotFoundView,
 } from '../../components/ContentViewer'
 
-export default function RouteViewer() {
-  const { slug } = useParams()
+export default function RouteViewer({ rootSlug }) {
+  const params = useParams()
+  // On the root path "/" there is no :slug param — fall back to rootSlug ("home")
+  const slug = params.slug || rootSlug
   const [route, setRoute] = useState(null)
   const [status, setStatus] = useState('loading') // 'loading' | 'ok' | 'disabled' | 'notfound' | 'error'
 

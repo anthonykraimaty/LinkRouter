@@ -73,8 +73,10 @@ function getPool(req) {
   return req.app.get('db');
 }
 
+// Note: 'home' is intentionally NOT reserved — the root path "/" serves the
+// route with slug 'home', so it must be creatable from the panel.
 const RESERVED_SLUGS = new Set([
-  'admin', 'api', 'uploads', 'favicon.ico', 'login', 'setup',
+  'admin', 'manage', 'api', 'uploads', 'favicon.ico', 'login', 'setup',
   'static', 'assets', 'public', 'health', 'status',
 ]);
 

@@ -199,7 +199,7 @@ export default function CsvImport() {
             Bulk create routes by uploading a CSV file
           </p>
         </div>
-        <Link to="/admin" className="btn-secondary">Back to Routes</Link>
+        <Link to="/manage" className="btn-secondary">Back to Routes</Link>
       </div>
 
       {/* Step 1: Upload */}
@@ -525,7 +525,7 @@ export default function CsvImport() {
           {/* Done actions */}
           {!importing && (
             <div className="flex gap-3">
-              <Link to="/admin" className="btn-primary">Go to Dashboard</Link>
+              <Link to="/manage" className="btn-primary">Go to Dashboard</Link>
               <button onClick={() => { setStep('upload'); setRows([]); setImportStatus({}); setFiles({}) }} className="btn-secondary">
                 Import Another CSV
               </button>

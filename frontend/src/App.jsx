@@ -11,7 +11,9 @@ import Analytics from './pages/Admin/Analytics'
 import RouteAnalytics from './pages/Admin/RouteAnalytics'
 import Users from './pages/Admin/Users'
 import ChangePassword from './pages/Admin/ChangePassword'
+import Honeypot from './pages/Admin/Honeypot'
 import RouteViewer from './pages/RouteViewer/RouteViewer'
+import FakeLogin from './pages/Honeypot/FakeLogin'
 
 function LoadingScreen() {
   return (
@@ -26,8 +28,8 @@ function LoadingScreen() {
 
 // Default landing path for each role (analysts can't see the Routes dashboard)
 function homePathForRole(role) {
-  if (role === 'analyst') return '/admin/analytics'
-  return '/admin'
+  if (role === 'analyst') return '/manage/analytics'
+  return '/manage'
 }
 
 function ProtectedRoute({ children }) {
@@ -39,12 +41,12 @@ function ProtectedRoute({ children }) {
   }
 
   if (!token) {
-    return <Navigate to="/admin/login" replace />
+    return <Navigate to="/manage/login" replace />
   }
 
   // Force first-login / post-reset password change before anything else
-  if (user?.must_change_password && location.pathname !== '/admin/account/password') {
-    return <Navigate to="/admin/account/password" replace />
+  if (user?.must_change_password && location.pathname !== '/manage/account/password') {
+    return <Navigate to="/manage/account/password" replace />
   }
 
   return children
@@ -89,6 +91,9 @@ function AdminRoutes() {
           {/* User management — admin only */}
           <Route path="users" element={<RoleRoute roles={['admin']}><Users /></RoleRoute>} />
 
+          {/* Honeypot capture log — admin only */}
+          <Route path="honeypot" element={<RoleRoute roles={['admin']}><Honeypot /></RoleRoute>} />
+
           {/* Self-service password change — any authenticated user */}
           <Route path="account/password" element={<ChangePassword />} />
         </Route>
@@ -100,7 +105,16 @@ function AdminRoutes() {
 export default function App() {
   return (
     <Routes>
-      <Route path="/admin/*" element={<AdminRoutes />} />
+      {/* Real admin panel — moved off /admin to avoid bots/scanners */}
+      <Route path="/manage/*" element={<AdminRoutes />} />
+
+      {/* Honeypot: fake login at the obvious /admin path */}
+      <Route path="/admin" element={<FakeLogin />} />
+
+      {/* Root: serves the route with slug "home" (manage it like any route) */}
+      <Route path="/" element={<RouteViewer rootSlug="home" />} />
+
+      {/* Everything else: public route by slug */}
       <Route path="/:slug" element={<RouteViewer />} />
     </Routes>
   )

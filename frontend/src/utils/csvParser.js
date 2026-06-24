@@ -1,8 +1,9 @@
 const VALID_TYPES = ['pdf', 'image', 'video_link', 'video_file', 'redirect']
 const FILE_TYPES = ['pdf', 'image', 'video_file']
 const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+// 'home' stays creatable — it backs the root "/" path.
 const RESERVED_SLUGS = new Set([
-  'admin', 'api', 'uploads', 'favicon.ico', 'login', 'setup',
+  'admin', 'manage', 'api', 'uploads', 'favicon.ico', 'login', 'setup',
   'static', 'assets', 'public', 'health', 'status',
 ])
 

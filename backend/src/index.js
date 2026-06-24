@@ -12,6 +12,7 @@ const adminRoutes = require('./routes/admin');
 const publicRoutes = require('./routes/public');
 const analyticsRoutes = require('./routes/analytics');
 const usersRoutes = require('./routes/users');
+const honeypotRoutes = require('./routes/honeypot');
 
 const PORT = parseInt(process.env.PORT, 10) || 4000;
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -86,6 +87,7 @@ app.use('/api/admin/analytics', analyticsRoutes);
 app.use('/api/admin/users', usersRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/public', publicRoutes);
+app.use('/api/honeypot', honeypotRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

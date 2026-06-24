@@ -83,6 +83,29 @@ CREATE INDEX IF NOT EXISTS idx_route_views_viewed_at ON route_views (viewed_at);
 CREATE INDEX IF NOT EXISTS idx_route_views_route_viewed ON route_views (route_id, viewed_at);
 
 -- -----------------------------------------------------------
+-- honeypot_attempts table (decoy /admin login: one row per submit)
+-- Captures whatever the browser exposes WITH the visitor's consent.
+-- No real authentication ever happens here.
+-- -----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS honeypot_attempts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  attempted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  ip_address INET,
+  country VARCHAR(100),
+  city VARCHAR(150),
+  username_tried TEXT,
+  password_tried TEXT,
+  user_agent TEXT,
+  -- Consent-based browser signals (null when the visitor declined / unavailable)
+  gps_latitude DOUBLE PRECISION,
+  gps_longitude DOUBLE PRECISION,
+  gps_accuracy DOUBLE PRECISION,
+  client_meta JSONB
+);
+
+CREATE INDEX IF NOT EXISTS idx_honeypot_attempted_at ON honeypot_attempts (attempted_at);
+
+-- -----------------------------------------------------------
 -- Seed default templates (only if they don't already exist)
 -- -----------------------------------------------------------
 INSERT INTO templates (name, html_content, css_content, is_default)

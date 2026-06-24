@@ -122,7 +122,7 @@ export default function RouteAnalytics() {
     return (
       <div className="card py-12 text-center">
         <p className="text-slate-500">This route no longer exists.</p>
-        <Link to="/admin/analytics" className="btn-secondary mt-4">
+        <Link to="/manage/analytics" className="btn-secondary mt-4">
           Back to Analytics
         </Link>
       </div>
@@ -141,7 +141,7 @@ export default function RouteAnalytics() {
       {/* Breadcrumb + header */}
       <div className="mb-6">
         <Link
-          to="/admin/analytics"
+          to="/manage/analytics"
           className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-700"
         >
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

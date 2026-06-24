@@ -98,13 +98,13 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Link to="/admin/routes/import" className="btn-secondary">
+          <Link to="/manage/routes/import" className="btn-secondary">
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
             </svg>
             Import CSV
           </Link>
-          <Link to="/admin/routes/new" className="btn-primary">
+          <Link to="/manage/routes/new" className="btn-primary">
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
@@ -149,7 +149,7 @@ export default function Dashboard() {
           </div>
           <h3 className="text-lg font-semibold text-slate-900">No routes yet</h3>
           <p className="mt-1 text-sm text-slate-500">Create your first route to get started.</p>
-          <Link to="/admin/routes/new" className="btn-primary mt-6">
+          <Link to="/manage/routes/new" className="btn-primary mt-6">
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
@@ -215,7 +215,7 @@ export default function Dashboard() {
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
                           <Link
-                            to={`/admin/analytics/routes/${route.id}`}
+                            to={`/manage/analytics/routes/${route.id}`}
                             className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
                             title="View analytics"
                           >
@@ -225,7 +225,7 @@ export default function Dashboard() {
                             </svg>
                           </Link>
                           <Link
-                            to={`/admin/routes/${route.id}/edit`}
+                            to={`/manage/routes/${route.id}/edit`}
                             className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
                             title="Edit"
                           >

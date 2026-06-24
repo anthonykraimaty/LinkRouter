@@ -7,7 +7,7 @@ export default function Login({ setupMode: setupModeProp = false }) {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const isSetup = setupModeProp || location.pathname === '/admin/setup'
+  const isSetup = setupModeProp || location.pathname === '/manage/setup'
 
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -17,13 +17,13 @@ export default function Login({ setupMode: setupModeProp = false }) {
 
   useEffect(() => {
     if (!loading && token) {
-      navigate('/admin', { replace: true })
+      navigate('/manage', { replace: true })
     }
   }, [token, loading, navigate])
 
   useEffect(() => {
     if (!loading && !isSetup && needsSetup) {
-      navigate('/admin/setup', { replace: true })
+      navigate('/manage/setup', { replace: true })
     }
   }, [loading, needsSetup, isSetup, navigate])
 
@@ -33,7 +33,7 @@ export default function Login({ setupMode: setupModeProp = false }) {
     setSubmitting(true)
     try {
       await login(username, password)
-      navigate('/admin', { replace: true })
+      navigate('/manage', { replace: true })
     } catch (err) {
       setError(err.message || 'Invalid credentials')
     } finally {
@@ -64,7 +64,7 @@ export default function Login({ setupMode: setupModeProp = false }) {
         throw new Error(data.error || 'Setup failed')
       }
       await login(username, password)
-      navigate('/admin', { replace: true })
+      navigate('/manage', { replace: true })
     } catch (err) {
       setError(err.message || 'Setup failed')
     } finally {
