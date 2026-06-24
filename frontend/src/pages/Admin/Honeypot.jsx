@@ -14,6 +14,33 @@ function gpsMapsUrl(lat, lng) {
   return `https://www.google.com/maps?q=${lat},${lng}`
 }
 
+// Short device label for the table: model if known, else platform + version.
+function deviceLabel(meta) {
+  if (!meta) return '—'
+  const ch = meta.clientHints
+  if (ch?.model) return ch.model
+  const parts = []
+  if (ch?.platform) parts.push(ch.platform)
+  else if (meta.platform) parts.push(meta.platform)
+  if (ch?.platformVersion) parts.push(ch.platformVersion)
+  if (ch?.mobile != null) parts.push(ch.mobile ? 'mobile' : 'desktop')
+  return parts.length ? parts.join(' ') : '—'
+}
+
+function gpuLabel(meta) {
+  const w = meta?.webgl
+  return w?.unmaskedRenderer || w?.renderer || null
+}
+
+function SummaryRow({ label, value, mono }) {
+  return (
+    <div className="flex gap-2">
+      <dt className="w-28 shrink-0 text-slate-400">{label}</dt>
+      <dd className={`text-slate-700 ${mono ? 'font-mono' : ''}`}>{value || '—'}</dd>
+    </div>
+  )
+}
+
 export default function Honeypot() {
   const { apiFetch } = useAuth()
   const [attempts, setAttempts] = useState([])
@@ -110,6 +137,7 @@ export default function Honeypot() {
                   <th className="px-4 py-3">When</th>
                   <th className="px-4 py-3">IP</th>
                   <th className="px-4 py-3">Location</th>
+                  <th className="px-4 py-3">Device</th>
                   <th className="px-4 py-3">Credentials tried</th>
                   <th className="px-4 py-3">GPS</th>
                   <th className="px-4 py-3"></th>
@@ -127,6 +155,7 @@ export default function Honeypot() {
                         <td className="px-4 py-3 text-slate-600">
                           {[a.city, a.country].filter(Boolean).join(', ') || '—'}
                         </td>
+                        <td className="px-4 py-3 text-slate-700">{deviceLabel(a.client_meta)}</td>
                         <td className="px-4 py-3">
                           <span className="font-medium text-slate-800">{a.username_tried || '—'}</span>
                           <span className="mx-1 text-slate-300">/</span>
@@ -163,21 +192,40 @@ export default function Honeypot() {
                       </tr>
                       {isOpen && (
                         <tr className="bg-slate-50/60">
-                          <td colSpan={6} className="px-4 py-4">
+                          <td colSpan={7} className="px-4 py-4">
                             <div className="grid gap-4 sm:grid-cols-2">
-                              <div>
-                                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">User agent</p>
-                                <p className="break-all font-mono text-xs text-slate-600">{a.user_agent || '—'}</p>
+                              <div className="space-y-2">
+                                <div>
+                                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Summary</p>
+                                  <dl className="space-y-1 text-xs text-slate-600">
+                                    <SummaryRow label="Model / device" value={deviceLabel(a.client_meta)} />
+                                    <SummaryRow label="GPU" value={gpuLabel(a.client_meta)} />
+                                    <SummaryRow label="Network" value={a.client_meta?.network?.effectiveType} />
+                                    <SummaryRow label="Timezone" value={a.client_meta?.timezone} />
+                                    <SummaryRow label="Canvas hash" value={a.client_meta?.canvasHash} mono />
+                                    <SummaryRow
+                                      label="IP geo"
+                                      value={[a.client_meta?.ip_geo?.region, a.client_meta?.ip_geo?.country]
+                                        .filter(Boolean)
+                                        .join(', ')}
+                                    />
+                                    <SummaryRow label="Capture stage" value={a.client_meta?.stage} />
+                                  </dl>
+                                </div>
+                                <div>
+                                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">User agent</p>
+                                  <p className="break-all font-mono text-xs text-slate-600">{a.user_agent || '—'}</p>
+                                </div>
                                 {hasGps && (
-                                  <p className="mt-2 text-xs text-slate-500">
+                                  <p className="text-xs text-slate-500">
                                     GPS: {a.gps_latitude}, {a.gps_longitude}
                                     {a.gps_accuracy != null && ` (±${Math.round(a.gps_accuracy)}m)`}
                                   </p>
                                 )}
                               </div>
                               <div>
-                                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Device / browser signals</p>
-                                <pre className="max-h-48 overflow-auto rounded bg-slate-900 p-3 text-xs leading-relaxed text-slate-100">
+                                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Raw signals</p>
+                                <pre className="max-h-64 overflow-auto rounded bg-slate-900 p-3 text-xs leading-relaxed text-slate-100">
 {a.client_meta ? JSON.stringify(a.client_meta, null, 2) : 'none'}
                                 </pre>
                               </div>

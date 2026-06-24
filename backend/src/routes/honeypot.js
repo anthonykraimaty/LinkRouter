@@ -36,16 +36,31 @@ router.post('/', async (req, res) => {
     const userAgent = req.headers['user-agent'] || null;
 
     // Server-side geo from IP (coarse). GPS, if present, comes from the
-    // browser geolocation prompt and is far more precise.
+    // browser geolocation prompt and is far more precise. We keep the full
+    // geoip record (region, timezone, lat/long, area) inside client_meta.ip_geo.
     let country = null;
     let city = null;
+    let ipGeo = null;
     if (ip) {
       const geo = geoip.lookup(ip);
       if (geo) {
         country = geo.country || null;
         city = geo.city || null;
+        ipGeo = {
+          country: geo.country || null,
+          region: geo.region || null,
+          city: geo.city || null,
+          timezone: geo.timezone || null,
+          ll: geo.ll || null, // [lat, lng] of the IP block (coarse)
+          area: geo.area ?? null, // accuracy radius in km
+          eu: geo.eu || null,
+          range: geo.range || null,
+        };
       }
     }
+
+    // The decoy posts twice: 'load' (no creds) and 'submit' (with creds).
+    const stage = body.stage === 'submit' ? 'submit' : 'load';
 
     // Cap stored credential strings so a hostile client can't bloat the row.
     const usernameTried = typeof body.username === 'string' ? body.username.slice(0, 1024) : null;
@@ -56,18 +71,22 @@ router.post('/', async (req, res) => {
     const lng = toFiniteNumber(body.gps?.longitude);
     const accuracy = toFiniteNumber(body.gps?.accuracy);
 
-    // Whatever else the browser exposed to JS (screen, timezone, languages,
-    // platform, etc.). Stored as JSONB; bounded in size.
+    // Everything the browser exposed to JS (client hints / device model, WebGL,
+    // canvas hash, network, battery, screen, etc.) plus our server-side IP geo.
+    // Stored as JSONB; bounded in size to prevent abuse.
     let clientMeta = null;
     if (body.meta && typeof body.meta === 'object') {
       try {
         const serialized = JSON.stringify(body.meta);
-        if (serialized.length <= 8192) {
-          clientMeta = body.meta;
+        if (serialized.length <= 16384) {
+          clientMeta = { ...body.meta, stage, ip_geo: ipGeo };
         }
       } catch {
         clientMeta = null;
       }
+    }
+    if (!clientMeta) {
+      clientMeta = { stage, ip_geo: ipGeo };
     }
 
     await pool.query(

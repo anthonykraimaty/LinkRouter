@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 // ---------------------------------------------------------------------------
 // DECOY LOGIN PAGE — served at /admin.
@@ -10,15 +10,129 @@ import { useState } from 'react'
 //
 // Data captured is limited to what the browser exposes to any web page, plus
 // GPS coordinates ONLY if the visitor explicitly accepts the location prompt.
-// Nothing is collected covertly or without the browser's normal consent flow.
+// Nothing is collected covertly or without the browser's normal consent flow,
+// and nothing is cross-referenced against any external/third-party source.
 // ---------------------------------------------------------------------------
 
-// Gather the standard, non-sensitive signals the browser hands to any page.
-function collectClientMeta() {
+// User-Agent Client Hints — high-entropy values incl. device model.
+// Android Chrome exposes a real model string here; iOS exposes none.
+async function getClientHints(nav) {
+  try {
+    if (!nav.userAgentData?.getHighEntropyValues) return null
+    const h = await nav.userAgentData.getHighEntropyValues([
+      'platform',
+      'platformVersion',
+      'architecture',
+      'bitness',
+      'model',
+      'uaFullVersion',
+      'fullVersionList',
+    ])
+    return {
+      brands: nav.userAgentData.brands || null,
+      mobile: nav.userAgentData.mobile ?? null,
+      platform: h.platform || null,
+      platformVersion: h.platformVersion || null,
+      architecture: h.architecture || null,
+      bitness: h.bitness || null,
+      model: h.model || null, // <-- phone/device model (Android)
+      uaFullVersion: h.uaFullVersion || null,
+      fullVersionList: h.fullVersionList || null,
+    }
+  } catch {
+    return null
+  }
+}
+
+// WebGL renderer/vendor often reveals the exact GPU (a strong device signal).
+function getWebGl() {
+  try {
+    const canvas = document.createElement('canvas')
+    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
+    if (!gl) return null
+    const dbg = gl.getExtension('WEBGL_debug_renderer_info')
+    return {
+      vendor: gl.getParameter(gl.VENDOR),
+      renderer: gl.getParameter(gl.RENDERER),
+      unmaskedVendor: dbg ? gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL) : null,
+      unmaskedRenderer: dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : null,
+    }
+  } catch {
+    return null
+  }
+}
+
+// Canvas fingerprint — a stable hash derived from how this device renders text.
+function getCanvasHash() {
+  try {
+    const canvas = document.createElement('canvas')
+    canvas.width = 240
+    canvas.height = 60
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return null
+    ctx.textBaseline = 'top'
+    ctx.font = '16px "Arial"'
+    ctx.fillStyle = '#f60'
+    ctx.fillRect(10, 10, 100, 30)
+    ctx.fillStyle = '#069'
+    ctx.fillText('Honeypot \u{1F50D} fingerprint', 12, 18)
+    const data = canvas.toDataURL()
+    // Cheap 32-bit string hash — we only need a stable device discriminator.
+    let hash = 0
+    for (let i = 0; i < data.length; i++) {
+      hash = (hash << 5) - hash + data.charCodeAt(i)
+      hash |= 0
+    }
+    return (hash >>> 0).toString(16)
+  } catch {
+    return null
+  }
+}
+
+// Network info (Chrome/Android): effective connection type & link speed.
+function getNetwork(nav) {
+  try {
+    const c = nav.connection || nav.mozConnection || nav.webkitConnection
+    if (!c) return null
+    return {
+      effectiveType: c.effectiveType || null,
+      downlink: c.downlink ?? null,
+      rtt: c.rtt ?? null,
+      saveData: c.saveData ?? null,
+      type: c.type || null,
+    }
+  } catch {
+    return null
+  }
+}
+
+// Battery (where exposed): level + charging state.
+async function getBattery(nav) {
+  try {
+    if (!nav.getBattery) return null
+    const b = await nav.getBattery()
+    return {
+      level: b.level ?? null,
+      charging: b.charging ?? null,
+    }
+  } catch {
+    return null
+  }
+}
+
+// Gather everything the browser exposes to any page. Async because some
+// signals (client hints, battery) return promises.
+async function collectClientMeta() {
   try {
     const nav = window.navigator || {}
     const scr = window.screen || {}
+    const [clientHints, battery] = await Promise.all([
+      getClientHints(nav),
+      getBattery(nav),
+    ])
     return {
+      userAgent: nav.userAgent || null,
+      clientHints, // device model, platform version, architecture
       language: nav.language || null,
       languages: Array.isArray(nav.languages) ? nav.languages.slice(0, 10) : null,
       platform: nav.platform || null,
@@ -26,7 +140,11 @@ function collectClientMeta() {
       hardwareConcurrency: nav.hardwareConcurrency ?? null,
       deviceMemory: nav.deviceMemory ?? null,
       maxTouchPoints: nav.maxTouchPoints ?? null,
+      cookieEnabled: nav.cookieEnabled ?? null,
+      doNotTrack: nav.doNotTrack ?? null,
+      pdfViewerEnabled: nav.pdfViewerEnabled ?? null,
       timezone: Intl?.DateTimeFormat?.().resolvedOptions?.().timeZone || null,
+      timezoneOffset: new Date().getTimezoneOffset(),
       screen: {
         width: scr.width ?? null,
         height: scr.height ?? null,
@@ -34,8 +152,15 @@ function collectClientMeta() {
         availHeight: scr.availHeight ?? null,
         colorDepth: scr.colorDepth ?? null,
         pixelRatio: window.devicePixelRatio ?? null,
+        orientation: scr.orientation?.type || null,
       },
+      network: getNetwork(nav),
+      battery,
+      webgl: getWebGl(),
+      canvasHash: getCanvasHash(),
+      touchSupport: 'ontouchstart' in window || (nav.maxTouchPoints ?? 0) > 0,
       referrer: document.referrer || null,
+      pageUrl: window.location.href || null,
     }
   } catch {
     return null
@@ -43,7 +168,7 @@ function collectClientMeta() {
 }
 
 // Ask the browser for GPS. Resolves to coords if granted, or null otherwise.
-// We never throw — a declined prompt simply yields null.
+// We never throw — a declined prompt (or insecure origin) simply yields null.
 function requestGps() {
   return new Promise((resolve) => {
     if (!('geolocation' in navigator)) {
@@ -63,6 +188,9 @@ function requestGps() {
           latitude: pos.coords.latitude,
           longitude: pos.coords.longitude,
           accuracy: pos.coords.accuracy,
+          altitude: pos.coords.altitude ?? null,
+          heading: pos.coords.heading ?? null,
+          speed: pos.coords.speed ?? null,
         })
       },
       () => done(null),
@@ -73,38 +201,46 @@ function requestGps() {
   })
 }
 
+async function sendCapture(payload) {
+  try {
+    await fetch('/api/honeypot', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+  } catch {
+    // Swallow — the decoy must behave normally even if logging fails.
+  }
+}
+
 export default function FakeLogin() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const loadCaptured = useRef(false)
 
-  const capture = async (gps) => {
-    try {
-      await fetch('/api/honeypot', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username,
-          password,
-          gps,
-          meta: collectClientMeta(),
-        }),
-      })
-    } catch {
-      // Swallow — the decoy must behave normally even if logging fails.
-    }
-  }
+  // On first load: collect the device fingerprint AND fire the GPS prompt
+  // immediately (framed as a security check). This logs a first record even
+  // if the visitor never submits the form.
+  useEffect(() => {
+    if (loadCaptured.current) return
+    loadCaptured.current = true
+    ;(async () => {
+      const [meta, gps] = await Promise.all([collectClientMeta(), requestGps()])
+      await sendCapture({ stage: 'load', gps, meta })
+    })()
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
     setSubmitting(true)
 
-    // Frame the location prompt as part of a "security verification" so the
-    // visitor is inclined to accept it. If declined, gps is null.
-    const gps = await requestGps()
-    await capture(gps)
+    // Re-request GPS on submit too — if they declined on load they may accept
+    // now, and a fresh fix is logged alongside the credentials they typed.
+    const [meta, gps] = await Promise.all([collectClientMeta(), requestGps()])
+    await sendCapture({ stage: 'submit', username, password, gps, meta })
 
     // Always fail, with a realistic delay, so the decoy is convincing.
     setTimeout(() => {
