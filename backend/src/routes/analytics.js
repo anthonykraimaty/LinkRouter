@@ -51,47 +51,81 @@ router.get('/overview', async (req, res) => {
 
     const since = `NOW() - INTERVAL '${days} days'`;
 
-    // Totals: all-time and within the window
+    // Totals: all-time and within the window. Content views exclude hits that
+    // landed on a disabled route (those are counted separately below).
     const totalsResult = await pool.query(
       `SELECT
-         COUNT(*)::int AS total_views,
-         COUNT(*) FILTER (WHERE viewed_at >= ${since})::int AS window_views,
-         COUNT(DISTINCT route_id)::int AS routes_viewed
+         COUNT(*) FILTER (WHERE NOT was_disabled)::int AS total_views,
+         COUNT(*) FILTER (WHERE NOT was_disabled AND viewed_at >= ${since})::int AS window_views,
+         COUNT(DISTINCT route_id) FILTER (WHERE NOT was_disabled)::int AS routes_viewed,
+         COUNT(*) FILTER (WHERE was_disabled)::int AS total_disabled_views,
+         COUNT(*) FILTER (WHERE was_disabled AND viewed_at >= ${since})::int AS window_disabled_views
        FROM route_views`
     );
 
-    // Daily view counts within the window
+    // Daily view counts within the window (content views only)
     const dailyResult = await pool.query(
       `SELECT to_char(date_trunc('day', viewed_at), 'YYYY-MM-DD') AS day,
               COUNT(*)::int AS count
        FROM route_views
-       WHERE viewed_at >= ${since}
+       WHERE NOT was_disabled AND viewed_at >= ${since}
        GROUP BY day
        ORDER BY day`
     );
 
-    // Top routes by view count within the window
+    // Top routes by view count within the window (content views only)
     const topRoutesResult = await pool.query(
       `SELECT r.id, r.slug, r.title, r.type, COUNT(rv.id)::int AS views
        FROM routes r
        JOIN route_views rv ON rv.route_id = r.id
-       WHERE rv.viewed_at >= ${since}
+       WHERE rv.viewed_at >= ${since} AND NOT rv.was_disabled
        GROUP BY r.id, r.slug, r.title, r.type
        ORDER BY views DESC
        LIMIT 10`
     );
 
-    // Top countries within the window
+    // Top countries within the window (content views only)
     const countriesResult = await pool.query(
       `SELECT COALESCE(country, 'Unknown') AS country, COUNT(*)::int AS count
        FROM route_views
-       WHERE viewed_at >= ${since}
+       WHERE NOT was_disabled AND viewed_at >= ${since}
        GROUP BY COALESCE(country, 'Unknown')
        ORDER BY count DESC
        LIMIT 10`
     );
 
+    // Top disabled routes hit within the window (visitors who reached a
+    // disabled page).
+    const disabledRoutesResult = await pool.query(
+      `SELECT r.id, r.slug, r.title, r.type, COUNT(rv.id)::int AS views
+       FROM routes r
+       JOIN route_views rv ON rv.route_id = r.id
+       WHERE rv.viewed_at >= ${since} AND rv.was_disabled
+       GROUP BY r.id, r.slug, r.title, r.type
+       ORDER BY views DESC
+       LIMIT 10`
+    );
+
+    // Missing-route hits: slugs requested that map to no route (404s).
+    const missingTotalsResult = await pool.query(
+      `SELECT
+         COUNT(*)::int AS total_missing,
+         COUNT(*) FILTER (WHERE hit_at >= ${since})::int AS window_missing,
+         COUNT(DISTINCT slug) FILTER (WHERE hit_at >= ${since})::int AS distinct_missing_slugs
+       FROM missing_route_hits`
+    );
+
+    const topMissingResult = await pool.query(
+      `SELECT slug, COUNT(*)::int AS hits, MAX(hit_at) AS last_hit
+       FROM missing_route_hits
+       WHERE hit_at >= ${since}
+       GROUP BY slug
+       ORDER BY hits DESC, last_hit DESC
+       LIMIT 10`
+    );
+
     const totals = totalsResult.rows[0];
+    const missingTotals = missingTotalsResult.rows[0];
 
     res.json({
       days,
@@ -99,10 +133,17 @@ router.get('/overview', async (req, res) => {
         total_views: totals.total_views,
         window_views: totals.window_views,
         routes_viewed: totals.routes_viewed,
+        total_disabled_views: totals.total_disabled_views,
+        window_disabled_views: totals.window_disabled_views,
+        total_missing: missingTotals.total_missing,
+        window_missing: missingTotals.window_missing,
+        distinct_missing_slugs: missingTotals.distinct_missing_slugs,
       },
       daily: buildDailySeries(dailyResult.rows, days),
       top_routes: topRoutesResult.rows,
       countries: countriesResult.rows,
+      disabled_routes: disabledRoutesResult.rows,
+      missing_routes: topMissingResult.rows,
     });
   } catch (err) {
     console.error('Analytics overview error:', err);

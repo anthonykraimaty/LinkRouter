@@ -77,10 +77,34 @@ CREATE TABLE IF NOT EXISTS route_views (
   user_agent TEXT
 );
 
+-- Marks a view that landed on a DISABLED route (the route exists but is
+-- turned off, so the visitor saw the disabled/maintenance page).
+ALTER TABLE route_views ADD COLUMN IF NOT EXISTS was_disabled BOOLEAN NOT NULL DEFAULT false;
+
 -- Index to speed up per-route lookups and time-bucketed aggregations
 CREATE INDEX IF NOT EXISTS idx_route_views_route_id ON route_views (route_id);
 CREATE INDEX IF NOT EXISTS idx_route_views_viewed_at ON route_views (viewed_at);
 CREATE INDEX IF NOT EXISTS idx_route_views_route_viewed ON route_views (route_id, viewed_at);
+CREATE INDEX IF NOT EXISTS idx_route_views_disabled ON route_views (was_disabled) WHERE was_disabled;
+
+-- -----------------------------------------------------------
+-- missing_route_hits table (a slug was requested that maps to no route)
+-- These are 404s: useful for spotting broken links, typos, or probing.
+-- There is no route_id to reference, so the requested slug is stored raw.
+-- -----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS missing_route_hits (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug VARCHAR(255) NOT NULL,
+  hit_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  ip_address INET,
+  country VARCHAR(100),
+  city VARCHAR(150),
+  user_agent TEXT,
+  referrer TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_missing_route_hits_hit_at ON missing_route_hits (hit_at);
+CREATE INDEX IF NOT EXISTS idx_missing_route_hits_slug ON missing_route_hits (slug);
 
 -- -----------------------------------------------------------
 -- honeypot_attempts table (decoy /admin login: one row per submit)

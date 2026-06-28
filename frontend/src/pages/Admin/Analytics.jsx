@@ -110,6 +110,8 @@ export default function Analytics() {
 
   const maxRouteViews = data?.top_routes?.[0]?.views || 0
   const maxCountry = data?.countries?.[0]?.count || 0
+  const maxDisabled = data?.disabled_routes?.[0]?.views || 0
+  const maxMissing = data?.missing_routes?.[0]?.hits || 0
 
   return (
     <div>
@@ -150,6 +152,20 @@ export default function Analytics() {
               label="Routes opened"
               value={data.totals.routes_viewed}
               hint="Distinct routes with at least one view"
+            />
+          </div>
+
+          {/* Secondary stat cards: disabled + missing traffic */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <StatCard
+              label={`Disabled-page views (last ${days} days)`}
+              value={data.totals.window_disabled_views}
+              hint={`${data.totals.total_disabled_views.toLocaleString()} all-time — visitors who reached a disabled route`}
+            />
+            <StatCard
+              label={`Missing-route hits (last ${days} days)`}
+              value={data.totals.window_missing}
+              hint={`${data.totals.distinct_missing_slugs.toLocaleString()} distinct slugs · ${data.totals.total_missing.toLocaleString()} all-time — requests with no matching route`}
             />
           </div>
 
@@ -202,6 +218,72 @@ export default function Analytics() {
                 getLabel={(c) => c.country}
                 getValue={(c) => c.count}
                 max={maxCountry}
+              />
+            </div>
+          </div>
+
+          {/* Disabled routes + missing slugs */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="card">
+              <h2 className="mb-1 text-sm font-semibold text-slate-700">
+                Most-visited disabled routes
+              </h2>
+              <p className="mb-4 text-xs text-slate-400">
+                Routes that are turned off but still receiving traffic
+              </p>
+              <RankedList
+                items={data.disabled_routes}
+                getValue={(r) => r.views}
+                max={maxDisabled}
+                renderLabel={(r) => {
+                  const badge = TYPE_BADGES[r.type] || {
+                    label: r.type,
+                    color: 'bg-slate-100 text-slate-700',
+                  }
+                  return (
+                    <span className="flex items-center gap-2">
+                      <Link
+                        to={`/manage/analytics/routes/${r.id}`}
+                        className="truncate font-medium text-indigo-600 hover:underline"
+                      >
+                        /{r.slug}
+                      </Link>
+                      <span
+                        className={`hidden shrink-0 rounded-full px-2 py-0.5 text-xs font-medium sm:inline-flex ${badge.color}`}
+                      >
+                        {badge.label}
+                      </span>
+                      <span className="hidden shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 sm:inline-flex">
+                        Disabled
+                      </span>
+                    </span>
+                  )
+                }}
+              />
+            </div>
+
+            <div className="card">
+              <h2 className="mb-1 text-sm font-semibold text-slate-700">
+                Requests to non-existent routes
+              </h2>
+              <p className="mb-4 text-xs text-slate-400">
+                Slugs that were accessed but have no mapping (404s)
+              </p>
+              <RankedList
+                items={data.missing_routes}
+                getValue={(m) => m.hits}
+                max={maxMissing}
+                renderLabel={(m) => (
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate font-mono text-slate-700">/{m.slug}</span>
+                    <Link
+                      to={`/manage/routes/new?slug=${encodeURIComponent(m.slug)}`}
+                      className="hidden shrink-0 text-xs font-medium text-indigo-600 hover:underline sm:inline"
+                    >
+                      Create
+                    </Link>
+                  </span>
+                )}
               />
             </div>
           </div>

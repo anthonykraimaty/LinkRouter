@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 
 const ROUTE_TYPES = [
@@ -22,11 +22,14 @@ export default function RouteForm() {
   const { id } = useParams()
   const isEditing = Boolean(id)
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { apiFetch } = useAuth()
   const fileInputRef = useRef(null)
 
   const [form, setForm] = useState({
-    slug: '',
+    // Prefill the slug from ?slug= when creating (e.g. from the Analytics
+    // "missing routes" list). Ignored when editing an existing route.
+    slug: !id ? (searchParams.get('slug') || '') : '',
     title: '',
     type: 'pdf',
     content_url: '',

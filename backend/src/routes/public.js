@@ -15,12 +15,9 @@ function getClientIp(req) {
   return ip.replace(/^::ffff:/, '');
 }
 
-// Record a view for an opened route. Fire-and-forget: failures are logged but
-// never block or fail the public response.
-function recordView(pool, routeId, req) {
+// Resolve coarse geo (country/city) from the request IP.
+function geoFromRequest(req) {
   const ip = getClientIp(req);
-  const userAgent = req.headers['user-agent'] || null;
-
   let country = null;
   let city = null;
   if (ip) {
@@ -30,15 +27,41 @@ function recordView(pool, routeId, req) {
       city = geo.city || null;
     }
   }
+  return { ip, country, city };
+}
+
+// Record a view for an opened route. `wasDisabled` flags hits that landed on a
+// disabled route (the visitor saw the disabled page). Fire-and-forget: failures
+// are logged but never block or fail the public response.
+function recordView(pool, routeId, req, wasDisabled = false) {
+  const { ip, country, city } = geoFromRequest(req);
+  const userAgent = req.headers['user-agent'] || null;
 
   pool
     .query(
-      `INSERT INTO route_views (route_id, ip_address, country, city, user_agent)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [routeId, ip || null, country, city, userAgent]
+      `INSERT INTO route_views (route_id, ip_address, country, city, user_agent, was_disabled)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [routeId, ip || null, country, city, userAgent, wasDisabled]
     )
     .catch((err) => {
       console.error('Failed to record route view:', err.message);
+    });
+}
+
+// Record a hit to a slug that maps to no route (a 404). Fire-and-forget.
+function recordMissingHit(pool, slug, req) {
+  const { ip, country, city } = geoFromRequest(req);
+  const userAgent = req.headers['user-agent'] || null;
+  const referrer = req.headers['referer'] || req.headers['referrer'] || null;
+
+  pool
+    .query(
+      `INSERT INTO missing_route_hits (slug, ip_address, country, city, user_agent, referrer)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [String(slug).slice(0, 255), ip || null, country, city, userAgent, referrer]
+    )
+    .catch((err) => {
+      console.error('Failed to record missing route hit:', err.message);
     });
 }
 
@@ -59,6 +82,8 @@ router.get('/:slug', async (req, res) => {
     );
 
     if (result.rows.length === 0) {
+      // No mapping for this slug — record the 404 for analytics.
+      recordMissingHit(pool, slug, req);
       return res.status(404).json({ error: 'not_found' });
     }
 
@@ -66,6 +91,9 @@ router.get('/:slug', async (req, res) => {
 
     // Handle disabled routes
     if (!route.enabled) {
+      // Record the hit so disabled-page traffic shows up in analytics.
+      recordView(pool, route.id, req, true);
+
       if (route.disabled_template_id) {
         const templateResult = await pool.query(
           'SELECT html_content, css_content FROM templates WHERE id = $1',
@@ -96,8 +124,8 @@ router.get('/:slug', async (req, res) => {
       });
     }
 
-    // Record the view for analytics (non-blocking, only for enabled routes)
-    recordView(pool, route.id, req);
+    // Record the view for analytics (non-blocking; enabled route)
+    recordView(pool, route.id, req, false);
 
     // Return route data for all types (frontend handles rendering and redirects)
     res.json({
